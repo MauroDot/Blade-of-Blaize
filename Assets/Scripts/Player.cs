@@ -34,6 +34,11 @@ public class Player : MonoBehaviour
     [SerializeField]
     private Slider _staminaSlider;
 
+    [SerializeField]
+    private float _jumpStaminaCost = 25.0f;  // Percentage of stamina used when jumping
+
+    private PlayerAnimation _playerAnim;
+
 
     void Start()
     {
@@ -49,11 +54,23 @@ public class Player : MonoBehaviour
         Jump();
         CheckGroundStatus();
         UpdateStamina();
+
+        // Check for left mouse button click
+        if (Input.GetMouseButtonDown(0))  // 0 is for left mouse button
+        {
+            Attack();
+        }
+    }
+
+    private void Attack()
+    {
+        _playerAnim.Attack();
     }
 
     private void InitializeComponents()
     {
         _rigid = GetComponent<Rigidbody2D>();
+        _playerAnim = GetComponent<PlayerAnimation>();
     }
 
     private void MovePlayer()
@@ -62,24 +79,58 @@ public class Player : MonoBehaviour
         {
             float move = Input.GetAxisRaw("Horizontal") * _playerSpeed;
 
-            if (Input.GetKey(KeyCode.J) && _currentStamina > 0)
+            // Check if the player is moving left or right and flip the sprite accordingly
+            if (move > 0) // Moving right
+            {
+                Flip(false);  // false indicates not flipped (right facing)
+            }
+            else if (move < 0) // Moving left
+            {
+                Flip(true);  // true indicates flipped (left facing)
+            }
+
+            if (Input.GetKey(KeyCode.Mouse1) && _currentStamina > 0)
             {
                 move *= _speedBoostMultiplier;
                 _currentStamina -= _staminaDrainRate * Time.deltaTime;  // Decrease stamina
             }
 
             _rigid.velocity = new Vector2(move, _rigid.velocity.y);
+            _playerAnim.Move(move);
         }
+    }
+
+    private void Flip(bool flipSprite)
+    {
+        // Get the local scale of the GameObject
+        Vector3 theScale = transform.localScale;
+
+        // If flipSprite is true, set the x-component to its absolute value (facing left)
+        // Otherwise, set it to its negative absolute value (facing right)
+        theScale.x = flipSprite ? Mathf.Abs(theScale.x) * -1 : Mathf.Abs(theScale.x);
+
+        // Apply the new local scale to flip the sprite
+        transform.localScale = theScale;
     }
 
     private void Jump()
     {
         if (Input.GetKeyDown(KeyCode.Space) && _grounded)
         {
-            _rigid.velocity = new Vector2(_rigid.velocity.x, _jumpForce);
-            _grounded = false;
-            _resetJump = true;
-            StartCoroutine(ResetJumpRoutine());
+            // Check if the player has enough stamina to jump
+            if (_currentStamina >= (_maxStamina * (_jumpStaminaCost / 100.0f)))
+            {
+                _rigid.velocity = new Vector2(_rigid.velocity.x, _jumpForce);
+                _grounded = false;
+                _resetJump = true;
+                StartCoroutine(ResetJumpRoutine());
+
+                // Deduct stamina cost for jumping
+                _currentStamina -= _maxStamina * (_jumpStaminaCost / 100.0f);
+
+                // Start the jump animation
+                _playerAnim.Jumping(true);
+            }
         }
     }
 
@@ -94,6 +145,16 @@ public class Player : MonoBehaviour
         if (hitInfo.collider != null && !_resetJump)
         {
             _grounded = true;
+        }
+        else
+        {
+            _grounded = false;
+        }
+
+        if (hitInfo.collider != null && !_resetJump)
+        {
+            _grounded = true;
+            _playerAnim.Jumping(false); // End the jump animation when grounded
         }
         else
         {
