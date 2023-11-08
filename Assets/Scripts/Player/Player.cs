@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
-public class Player : MonoBehaviour
+public class Player : MonoBehaviour, IDamageable
 {
     private Rigidbody2D _rigid;
 
@@ -34,6 +34,8 @@ public class Player : MonoBehaviour
 
     private PlayerAnimation _playerAnim;
     private bool _doubleJumpAvailable = true;
+
+    public int Health { get; set; }
 
     void Start()
     {
@@ -182,5 +184,10 @@ public class Player : MonoBehaviour
     {
         yield return new WaitForSeconds(0.1f);
         _resetJump = false;
+    }
+
+    public void Damage()
+    {
+        Debug.Log("Player::Damage()");
     }
 }
