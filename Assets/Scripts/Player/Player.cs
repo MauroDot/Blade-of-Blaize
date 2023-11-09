@@ -6,8 +6,9 @@ using TMPro;
 
 public class Player : MonoBehaviour, IDamageable
 {
-    private Rigidbody2D _rigid;
+    public int diamonds;
 
+    private Rigidbody2D _rigid;
     [SerializeField]
     private float _jumpForce = 5.0f;
     [SerializeField]
