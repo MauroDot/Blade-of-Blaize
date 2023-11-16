@@ -34,7 +34,7 @@ public class MossGiant : Enemy, IDamageable
             diamond.GetComponent<Diamond>().gems = base.gems;
 
             // Assume death animation is 1.5 seconds long
-            float deathAnimationTime = 7f;
+            float deathAnimationTime = 1f;
             Destroy(gameObject, deathAnimationTime);
         }
     }

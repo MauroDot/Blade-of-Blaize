@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using UnityEngine.SceneManagement;
 
 public class Player : MonoBehaviour, IDamageable
 {
@@ -44,6 +45,7 @@ public class Player : MonoBehaviour, IDamageable
         _currentStamina = _maxStamina;
         _staminaSlider.maxValue = _maxStamina;
         _staminaSlider.value = _currentStamina;
+        Health = 4;
     }
 
     void Update()
@@ -189,6 +191,38 @@ public class Player : MonoBehaviour, IDamageable
 
     public void Damage()
     {
+        if (Health < 1)
+        {
+            return;
+        }
+
         Debug.Log("Player::Damage()");
+        Health--;
+        UIManager.Instance.UpdateLives(Health);
+
+        if (Health < 1)
+        {
+            // Player died
+            Death();
+            // Optionally disable player controls here
+        }
+    }
+
+    public void Addgems(int amount)
+    {
+        diamonds += amount;
+        UIManager.Instance.UpdateGemCount(diamonds);
+    }
+    public void Death()
+    {
+        _playerAnim.Death();
+        // You may also want to add a delay here using a coroutine if there is a death animation
+        StartCoroutine(RestartLevelAfterDelay(2f)); // 2 seconds delay for example
+    }
+
+    private IEnumerator RestartLevelAfterDelay(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
 }

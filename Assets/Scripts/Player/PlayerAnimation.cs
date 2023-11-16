@@ -45,4 +45,9 @@ public class PlayerAnimation : MonoBehaviour
         yield return new WaitForSeconds(delay);
         _swordArc.SetActive(false);
     }
+
+    public void Death()
+    {
+        _anim.SetTrigger("Death");
+    }
 }

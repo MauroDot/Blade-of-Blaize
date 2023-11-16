@@ -10,7 +10,7 @@ public class AcidEffect : MonoBehaviour
     }
     private void Update()
     {
-        transform.Translate(Vector3.left * 3 * Time.deltaTime);
+        transform.Translate(Vector3.left * 5 * Time.deltaTime);
     }
 
     private void OnTriggerEnter2D(Collider2D other)

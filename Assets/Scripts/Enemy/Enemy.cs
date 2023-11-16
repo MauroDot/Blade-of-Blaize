@@ -23,6 +23,8 @@ public abstract class Enemy : MonoBehaviour
     protected bool isHit = false;
 
     protected Player player;
+
+    private HitboxController hitboxController;
     public virtual void Update()
     {
         if (anim.GetCurrentAnimatorStateInfo(0).IsName("Idle") && anim.GetBool("InCombat") == false)
@@ -45,6 +47,7 @@ public abstract class Enemy : MonoBehaviour
         anim = GetComponentInChildren<Animator>();
         sprite = GetComponentInChildren<SpriteRenderer>();
         player = GameObject.FindGameObjectWithTag("Player").GetComponent<Player>();
+        hitboxController = GetComponentInChildren<HitboxController>();
     }
     public virtual void Movement()
     {
@@ -91,5 +94,19 @@ public abstract class Enemy : MonoBehaviour
         {
             sprite.flipX = true;
         }
+    }
+
+    // Call this method to activate the hitbox
+    public void StartAttack()
+    {
+        hitboxController.ActivateHitbox();
+        // Trigger attack animation, etc.
+    }
+
+    // Call this method to deactivate the hitbox
+    public void EndAttack()
+    {
+        hitboxController.DeactivateHitbox();
+        // End attack animation, etc.
     }
 }

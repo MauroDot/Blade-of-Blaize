@@ -21,6 +21,8 @@ public class UIManager : MonoBehaviour
 
     public TMP_Text playerGemCount;
     public Image selectionImage;
+    public TMP_Text gemCountText;
+    public Image[] healthBars;
     public void OpenShop(int gemCount)
     {
         playerGemCount.text = "" + gemCount + "G";
@@ -28,5 +30,25 @@ public class UIManager : MonoBehaviour
     private void Awake()
     {
         _instance = this;
+    }
+    public void UpdateShopSelection(int ypos)
+    {
+        selectionImage.rectTransform.anchoredPosition = new Vector2(selectionImage.rectTransform.anchoredPosition.x, ypos);
+    }
+
+    public void UpdateGemCount(int count)
+    {
+        gemCountText.text = "" + count;
+    }
+
+    public void UpdateLives(int livesRemaining)
+    {
+        for (int i = 0; i <= livesRemaining; i++)
+        {
+            if(i == livesRemaining)
+            {
+                healthBars[i].enabled = false;
+            }
+        }
     }
 }

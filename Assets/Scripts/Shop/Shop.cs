@@ -7,15 +7,18 @@ using UnityEngine;
 public class Shop : MonoBehaviour
 {
     public GameObject shopPanel;
+    public int currentSelectedItem;
+    public int currentItemCost;
+    private Player _player;
     private void OnTriggerEnter2D(Collider2D other)
     {
         if (other.tag == "Player")
         {
-            Player player = other.GetComponent<Player>();
+            _player = other.GetComponent<Player>();
             
-            if (player != null)
+            if (_player != null)
             {
-                UIManager.Instance.OpenShop(player.diamonds);
+                UIManager.Instance.OpenShop(_player.diamonds);
             }
             
             shopPanel.SetActive(true);
@@ -29,8 +32,51 @@ public class Shop : MonoBehaviour
             shopPanel.SetActive(false);
         }
     }
-    public void selectItem()
+    public void selectItem(int item)
+    {        
+        Debug.Log("selectItem() : " + item);
+
+        switch(item)
+        {
+            case 0: //flame sword
+                UIManager.Instance.UpdateShopSelection(152);
+                currentSelectedItem = 0;
+                currentItemCost = 200;
+                break;
+            case 1: //boots of flight
+                UIManager.Instance.UpdateShopSelection(57);
+                currentSelectedItem = 1;
+                currentItemCost = 400;
+                break;
+            case 2: //key to castle
+                UIManager.Instance.UpdateShopSelection(-47);
+                currentSelectedItem = 2;
+                currentItemCost = 100;
+                break;
+        }
+    }
+    public void BuyItem()
     {
-        Debug.Log("selectItem()");
+        if (_player.diamonds >= currentItemCost)
+        {
+            if (currentSelectedItem == 2)
+            {
+                GameManager.Instance.HasKeyToCastle = true;
+            }
+
+            _player.diamonds -= currentItemCost;
+            Debug.Log("Purchased " + currentSelectedItem);
+            Debug.Log("Remaining Gems: " + _player.diamonds);
+
+            // Update the UI with the new gem count
+            UIManager.Instance.UpdateGemCount(_player.diamonds);
+
+            //shopPanel.SetActive(false);
+        }
+        else
+        {
+            Debug.Log("Not Enough Gems (Closing Shop)");
+            shopPanel.SetActive(false);
+        }
     }
 }
