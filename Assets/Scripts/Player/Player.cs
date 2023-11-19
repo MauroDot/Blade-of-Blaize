@@ -17,22 +17,23 @@ public class Player : MonoBehaviour, IDamageable
     [SerializeField]
     private float _speedBoostMultiplier = 2.0f;
     [SerializeField]
-    private float _maxStamina = 100.0f;  // Max stamina amount
+    private float _maxStamina = 100.0f;
     [SerializeField]
-    private float _staminaDrainRate = 20.0f;  // How fast the stamina decreases
+    private float _staminaDrainRate = 20.0f;
     [SerializeField]
-    private float _staminaRefillRate = 10.0f;  // How fast the stamina refills
-    private float _currentStamina;  // Current stamina amount
+    private float _staminaRefillRate = 10.0f;
+    private float _currentStamina;
 
     private bool _grounded;
     private bool _resetJump;
+    private bool _isBoosting = false;
 
     [SerializeField]
     private Slider _staminaSlider;
     [SerializeField]
-    private float _jumpStaminaCost = 25.0f;  // Percentage of stamina used when jumping
+    private float _jumpStaminaCost = 25.0f;
     [SerializeField]
-    private float _attackStaminaCost = 10.0f;  // Percentage of stamina used when attacking
+    private float _attackStaminaCost = 10.0f;
 
     private PlayerAnimation _playerAnim;
     private bool _doubleJumpAvailable = true;
@@ -47,21 +48,57 @@ public class Player : MonoBehaviour, IDamageable
         _staminaSlider.value = _currentStamina;
         Health = 4;
     }
-
     void Update()
     {
-        MovePlayer();
-        Jump();
+        HandlePCInput();
         CheckGroundStatus();
         UpdateStamina();
-
-        if (Input.GetMouseButtonDown(0))
-        {
-            Attack();
-        }
     }
 
-    private void Attack()
+    private void HandlePCInput()
+    {
+#if UNITY_STANDALONE || UNITY_WEBGL
+    // Handle PC-specific controls
+    float move = Input.GetAxisRaw("Horizontal") * _playerSpeed;
+    MovePlayer(move);
+
+    if (Input.GetMouseButton(1))
+    {
+        ActivateSpeedBoost(true);
+    }
+    else if (Input.GetMouseButtonUp(1))
+    {
+        ActivateSpeedBoost(false);
+    }
+
+    if (Input.GetKeyDown(KeyCode.Space))
+    {
+        PerformJump();
+    }
+
+    if (Input.GetMouseButtonDown(0))
+    {
+        PerformAttack();
+    }
+#endif
+    }
+    public void StartMovingLeft()
+    {
+        MovePlayer(-_playerSpeed, true);
+    }
+
+    public void StartMovingRight()
+    {
+        MovePlayer(_playerSpeed, true);
+    }
+
+    public void StopMoving()
+    {
+        MovePlayer(0, false);
+        _isBoosting = false; // Stop boosting when the button is released
+    }
+
+    public void PerformAttack()
     {
         if (_currentStamina >= (_maxStamina * (_attackStaminaCost / 100.0f)))
         {
@@ -69,132 +106,113 @@ public class Player : MonoBehaviour, IDamageable
             _currentStamina -= _maxStamina * (_attackStaminaCost / 100.0f);
         }
     }
+    public void PerformJump()
+    {
+        // Check if the player has enough stamina to jump
+        if (_currentStamina >= (_maxStamina * (_jumpStaminaCost / 100.0f)))
+        {
+            if (_grounded)
+            {
+                // Normal jump
+                _rigid.velocity = new Vector2(_rigid.velocity.x, _jumpForce);
+                _doubleJumpAvailable = true;  // Enable double jump
+            }
+            else if (_doubleJumpAvailable)
+            {
+                // Double jump
+                _rigid.velocity = new Vector2(_rigid.velocity.x, _jumpForce);
+                _doubleJumpAvailable = false; // Disable further double jumps
+            }
 
+            _currentStamina -= _maxStamina * (_jumpStaminaCost / 100.0f);
+            _playerAnim.Jumping(true);
+            _grounded = false;
+            _resetJump = true;
+            StartCoroutine(ResetJumpRoutine());
+        }
+    }
+    private void MovePlayer(float move, bool isMoving)
+    {
+        // Apply speed and boost logic
+        float speed = _playerSpeed;
+        if (isMoving)
+        {
+            if (_isBoosting && _currentStamina > 0)
+            {
+                speed *= _speedBoostMultiplier;
+            }
+            _rigid.velocity = new Vector2(move * speed, _rigid.velocity.y);
+            _playerAnim.Move(Mathf.Abs(move));
+
+            // Flip the sprite based on movement direction
+            Flip(move < 0);
+        }
+        else
+        {
+            _rigid.velocity = new Vector2(0, _rigid.velocity.y);
+            _playerAnim.Move(0);
+        }
+    }
+    private void ActivateSpeedBoost(bool isBoosting)
+    {
+        _isBoosting = isBoosting;
+    }
     private void InitializeComponents()
     {
         _rigid = GetComponent<Rigidbody2D>();
         _playerAnim = GetComponent<PlayerAnimation>();
     }
-
-    private void MovePlayer()
-    {
-        if (_grounded)  // Check if the player is grounded
-        {
-            float move = Input.GetAxisRaw("Horizontal") * _playerSpeed;
-
-            // Check if the player is moving left or right and flip the sprite accordingly
-            if (move > 0) // Moving right
-            {
-                Flip(false);  // false indicates not flipped (right facing)
-            }
-            else if (move < 0) // Moving left
-            {
-                Flip(true);  // true indicates flipped (left facing)
-            }
-
-            if (Input.GetKey(KeyCode.Mouse1) && _currentStamina > 0)
-            {
-                move *= _speedBoostMultiplier;
-                _currentStamina -= _staminaDrainRate * Time.deltaTime;  // Decrease stamina
-            }
-
-            _rigid.velocity = new Vector2(move, _rigid.velocity.y);
-            _playerAnim.Move(move);
-        }
-    }
-
     private void Flip(bool flipSprite)
     {
-        // Get the local scale of the GameObject
         Vector3 theScale = transform.localScale;
-
-        // If flipSprite is true, set the x-component to its absolute value (facing left)
-        // Otherwise, set it to its negative absolute value (facing right)
-        theScale.x = flipSprite ? Mathf.Abs(theScale.x) * -1 : Mathf.Abs(theScale.x);
-
-        // Apply the new local scale to flip the sprite
+        theScale.x = flipSprite ? -Mathf.Abs(theScale.x) : Mathf.Abs(theScale.x);
         transform.localScale = theScale;
     }
-
-    private void Jump()
-    {
-        if (Input.GetKeyDown(KeyCode.Space) && (_grounded || _doubleJumpAvailable))
-        {
-            if (!_grounded && _doubleJumpAvailable)  // This checks if we are doing a double jump
-            {
-                _doubleJumpAvailable = false;  // Disable further double jumps until grounded again
-            }
-
-            if (_grounded)
-            {
-                _doubleJumpAvailable = true;  // Reset double jump availability when grounded
-            }
-
-            // Check if the player has enough stamina to jump
-            if (_currentStamina >= (_maxStamina * (_jumpStaminaCost / 100.0f)))
-            {
-                _rigid.velocity = new Vector2(_rigid.velocity.x, _jumpForce);
-                _grounded = false;
-                _resetJump = true;
-                StartCoroutine(ResetJumpRoutine());
-
-                _currentStamina -= _maxStamina * (_jumpStaminaCost / 100.0f);
-                _playerAnim.Jumping(true);
-            }
-        }
-    }
-
     private void CheckGroundStatus()
     {
         Vector2 raycastOrigin = transform.position + new Vector3(0, -0.5f, 0);
         RaycastHit2D hitInfo = Physics2D.Raycast(raycastOrigin, Vector2.down, 0.5f, 1 << 8);
-
-        // This will draw the ray in the Unity Editor
-        Debug.DrawRay(raycastOrigin, Vector2.down * 0.5f, Color.green);
-
         if (hitInfo.collider != null && !_resetJump)
         {
-            _grounded = true;
+            if (!_grounded)
+            {
+                _grounded = true;
+                _doubleJumpAvailable = true; // Reset double jump availability when grounded
+            }
         }
         else
         {
             _grounded = false;
         }
-
-        if (hitInfo.collider != null && !_resetJump)
-        {
-            _grounded = true;
-            _playerAnim.Jumping(false); // End the jump animation when grounded
-        }
-        else
-        {
-            _grounded = false;
-        }
+        _playerAnim.Jumping(!_grounded);
     }
-
     private void UpdateStamina()
     {
-        // Refill stamina when the boost key is not pressed
-        if (!Input.GetKey(KeyCode.Mouse1) && _currentStamina < _maxStamina)
+        if (_isBoosting && _currentStamina > 0)
+        {
+            _currentStamina -= _staminaDrainRate * Time.deltaTime;
+            if (_currentStamina <= 0)
+            {
+                _currentStamina = 0;
+                _isBoosting = false;  // Stop boosting if stamina runs out
+            }
+        }
+        else if (_currentStamina < _maxStamina)
         {
             _currentStamina += _staminaRefillRate * Time.deltaTime;
-            _currentStamina = Mathf.Min(_currentStamina, _maxStamina);
         }
+
+        _currentStamina = Mathf.Clamp(_currentStamina, 0, _maxStamina);
         _staminaSlider.value = _currentStamina;
     }
-
     private IEnumerator ResetJumpRoutine()
     {
         yield return new WaitForSeconds(0.1f);
         _resetJump = false;
     }
-
     public void Damage()
     {
-        if (Health < 1)
-        {
-            return;
-        }
+        if (Health < 1) return;
 
         Debug.Log("Player::Damage()");
         Health--;
@@ -202,12 +220,9 @@ public class Player : MonoBehaviour, IDamageable
 
         if (Health < 1)
         {
-            // Player died
             Death();
-            // Optionally disable player controls here
         }
     }
-
     public void Addgems(int amount)
     {
         diamonds += amount;
@@ -216,13 +231,23 @@ public class Player : MonoBehaviour, IDamageable
     public void Death()
     {
         _playerAnim.Death();
-        // You may also want to add a delay here using a coroutine if there is a death animation
-        StartCoroutine(RestartLevelAfterDelay(2f)); // 2 seconds delay for example
+        StartCoroutine(RestartLevelAfterDelay(2f));
     }
-
     private IEnumerator RestartLevelAfterDelay(float delay)
     {
         yield return new WaitForSeconds(delay);
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+    }
+
+    public void ToggleSpeedBoost(bool boostActive)
+    {
+        if (boostActive && _currentStamina > 0)
+        {
+            _isBoosting = true;
+        }
+        else
+        {
+            _isBoosting = false;
+        }
     }
 }
